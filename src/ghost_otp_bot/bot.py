@@ -6,6 +6,7 @@ import sys
 import os
 from typing import Callable, Optional
 from .otp_manager import OTPManager
+from .nvidia_client import NVIDIAAPIError, NVIDIAClient
 
 
 class GhostOTPBot:
@@ -13,7 +14,7 @@ class GhostOTPBot:
     Main OTP Bot class that integrates Automaton for two-way communication.
     """
     
-    def __init__(self, automaton_path: str = None):
+    def __init__(self, automaton_path: str = None, nvidia_client: NVIDIAClient = None):
         """
         Initialize Ghost OTP Bot.
         
@@ -21,6 +22,7 @@ class GhostOTPBot:
             automaton_path: Path to automaton module (defaults to project automaton submodule)
         """
         self.otp_manager = OTPManager()
+        self.nvidia_client = nvidia_client or NVIDIAClient()
         self.automaton_path = automaton_path or os.path.join(
             os.path.dirname(__file__), '../../automaton'
         )
@@ -37,6 +39,7 @@ class GhostOTPBot:
             'qrcode': self.cmd_generate_qrcode,
             'help': self.cmd_help,
             'current': self.cmd_current_token,
+            'chat': self.cmd_chat,
         }
     
     def initialize_automaton(self):
@@ -202,9 +205,27 @@ class GhostOTPBot:
                 'verify': 'Verify an OTP token',
                 'qrcode': 'Generate QR code for OTP setup',
                 'current': 'Get current OTP token',
+                'chat': 'Ask the configured NVIDIA model a question',
                 'help': 'Show this help message'
             }
         }
+
+    def cmd_chat(self, prompt: str) -> dict:
+        """Send a prompt to the configured NVIDIA chat model."""
+        try:
+            response = self.nvidia_client.chat([
+                {'role': 'user', 'content': prompt}
+            ])
+            return {
+                'status': 'success',
+                'response': response,
+                'message': response,
+            }
+        except (NVIDIAAPIError, ValueError) as exc:
+            return {
+                'status': 'error',
+                'message': str(exc),
+            }
     
     def execute_command(self, command: str, *args, **kwargs) -> dict:
         """

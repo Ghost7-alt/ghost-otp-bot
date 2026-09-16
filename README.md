@@ -15,6 +15,7 @@ A Python-based OTP (One-Time Password) authentication bot with **two-way communi
 - 🔄 Two-way communication through Automaton integration
 - 📊 Event-based architecture for extensibility
 - 🎯 Simple command-based interface
+- 🤖 NVIDIA-powered chat command
 
 ## Architecture
 
@@ -141,6 +142,7 @@ token = otp_mgr.get_current_token('alice')
 | `verify` | `username token` | Verify OTP token |
 | `qrcode` | `username [output_path]` | Generate QR code |
 | `current` | `username` | Get current OTP token |
+| `chat` | `prompt` | Ask the configured NVIDIA model a question |
 | `help` | - | Show available commands |
 
 ## Automaton Integration
@@ -204,6 +206,22 @@ cp .env.example .env
 ```
 
 Edit `.env` with your settings.
+
+### NVIDIA Chat
+
+Set `NVIDIA_API_KEY` in `.env` and use the `chat` command:
+
+```bash
+NVIDIA_API_KEY=nvapi-your-key
+```
+
+```text
+ghost-otp> chat Explain how TOTP verification works
+```
+
+The integration uses NVIDIA's OpenAI-compatible `/v1/chat/completions` endpoint
+with the Nemotron model and settings shown in `.env.example`. The API key is
+read only from the environment and is never included in bot output.
 
 ## Development
 

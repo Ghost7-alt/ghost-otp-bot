@@ -7,5 +7,6 @@ __author__ = "Ghost7-alt"
 
 from .bot import GhostOTPBot
 from .otp_manager import OTPManager
+from .nvidia_client import NVIDIAAPIError, NVIDIAClient
 
-__all__ = ["GhostOTPBot", "OTPManager"]
+__all__ = ["GhostOTPBot", "OTPManager", "NVIDIAAPIError", "NVIDIAClient"]
