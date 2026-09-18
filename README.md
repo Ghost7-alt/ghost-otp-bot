@@ -146,3 +146,11 @@ composer test
 # or, without Composer:
 php tests/run.php
 ```
+
+## License
+
+This project is licensed under the [MIT License](licenses).
+
+Copyright © 2026 Hailey Knapp.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
