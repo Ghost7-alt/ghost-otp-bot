@@ -62,6 +62,8 @@ env/
 # Environment variables
 .env
 .env.local
+vendor/
+composer.lock
 
 # Project specific
 qr_codes/
