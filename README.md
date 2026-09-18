@@ -1,293 +1,148 @@
-![#](https://img.shields.io/badge/status-development-yellow)
-![Python](https://img.shields.io/badge/python-3.8%2B-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
+# Ghost OTP Bot
 
-# Ghost OTP Bot 👻
+An admin-controlled PHP 8.1+ Telegram utility bot with MySQL persistence, TOTP tools, usage statistics, configurable anti-spam protection, user-issued API tokens, authenticated webhooks, and optional NVIDIA-powered chat.
 
-A Python-based OTP (One-Time Password) authentication bot with **two-way communication** capabilities via **Automaton** library integration. Generate, verify, and manage TOTP-based OTP tokens with ease.
+Payment testing is deliberately sandbox-only. The bot accepts Stripe `sk_test_` keys and Stripe test PaymentMethod IDs (for example `pm_card_visa`). It never accepts, stores, or checks raw card numbers, expiry dates, CVVs, or live Stripe keys.
 
 ## Features
 
-✨ **Core Features:**
-- 🔐 OTP token generation using TOTP (Time-based One-Time Password)
-- ✅ OTP token verification and validation
-- 📱 QR code generation for easy authenticator app setup
-- 🔄 Two-way communication through Automaton integration
-- 📊 Event-based architecture for extensibility
-- 🎯 Simple command-based interface
-- 🤖 NVIDIA-powered chat command
+- User profile, individual stats, and global bot stats
+- Admin ban/unban, mute/unmute, per-user stats, API-token generation, and revocation
+- Configurable per-user cooldown for state-changing or provider-backed actions
+- Encrypted-at-rest Stripe test keys; saved keys are only displayed masked
+- Stripe test PaymentIntent command gated on a saved test key
+- Encrypted TOTP secrets and local verification
+- API token generator for users and admins; only SHA-256 token hashes are stored
+- BIN metadata lookup (optional provider) and local IBAN checksum validation
+- Optional NVIDIA-powered chat command using its OpenAI-compatible API
+- Telegram messaging webhook and provider-neutral call-event webhook
+- Audit messages to an optional logs chat without command arguments or secrets
 
-## Architecture
+## Requirements
 
-```
-ghost-otp-bot/
-├── src/ghost_otp_bot/
-│   ├── __init__.py           # Package initialization
-│   ├── bot.py                # Main bot class
-│   ├── otp_manager.py        # OTP operations
-│   └── main.py               # Entry point
-├── automaton/                # Automaton submodule (Git submodule)
-├── requirements.txt          # Dependencies
-├── setup.py                  # Package configuration
-└── README.md                 # This file
-```
+- PHP 8.1 or newer with `curl`, `pdo_mysql`, and `sodium`
+- MySQL 8+ or MariaDB 10.5+
+- A Telegram bot token and public HTTPS URL
 
-## Dependencies
-
-### Required
-- **pyotp** - OTP token generation and verification
-- **qrcode** - QR code generation
-- **Pillow** - Image processing for QR codes
-- **python-dotenv** - Environment configuration
-
-### Optional
-- **Automaton** - Two-way communication interface (Git submodule)
-
-## Installation
-
-### 1. Clone with Submodule
-```bash
-git clone --recurse-submodules https://github.com/Ghost7-alt/ghost-otp-bot.git
-cd ghost-otp-bot
-```
-
-If you already cloned without submodules:
-```bash
-git submodule update --init --recursive
-```
-
-### 2. Install Dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### 3. Install Package (Optional)
-```bash
-pip install -e .
-```
-
-## Usage
-
-### Running the Bot
-
-```bash
-python src/ghost_otp_bot/main.py
-```
-
-### Programmatic Usage
-
-```python
-from ghost_otp_bot import GhostOTPBot
-
-# Initialize bot
-bot = GhostOTPBot()
-
-# Initialize Automaton (optional)
-bot.initialize_automaton()
-
-# Generate OTP for a user
-result = bot.execute_command('generate', 'john_doe')
-print(result)
-# Output:
-# {
-#     'status': 'success',
-#     'secret': 'JBSWY3DPEBLW64TMMQ======',
-#     'uri': 'otpauth://totp/john_doe?secret=JBSWY3DPEBLW64TMMQ%3D%3D%3D%3D%3D%3D&issuer=Ghost+OTP+Bot',
-#     'message': 'OTP secret generated for john_doe'
-# }
-
-# Verify a token
-result = bot.execute_command('verify', 'john_doe', '123456')
-print(result)
-# Output: {'status': 'success', 'valid': True, 'message': 'Token valid for john_doe'}
-
-# Generate QR code
-result = bot.execute_command('qrcode', 'john_doe', './qr_codes/john_doe.png')
-print(result)
-
-# Get current token
-result = bot.execute_command('current', 'john_doe')
-print(result)
-# Output: {'status': 'success', 'token': '123456', 'username': 'john_doe'}
-```
-
-### Using OTPManager Directly
-
-```python
-from ghost_otp_bot import OTPManager
-
-otp_mgr = OTPManager()
-
-# Generate secret
-secret = otp_mgr.generate_secret('alice')
-
-# Get provisioning URI
-uri = otp_mgr.get_provisioning_uri('alice')
-
-# Generate QR code (returns bytes)
-qr_bytes = otp_mgr.generate_qr_code('alice')
-
-# Verify token
-is_valid = otp_mgr.verify_token('alice', '123456')
-
-# Get current token
-token = otp_mgr.get_current_token('alice')
-```
-
-## Available Commands
-
-| Command | Args | Description |
-|---------|------|-------------|
-| `generate` | `username [issuer]` | Generate new OTP secret |
-| `verify` | `username token` | Verify OTP token |
-| `qrcode` | `username [output_path]` | Generate QR code |
-| `current` | `username` | Get current OTP token |
-| `chat` | `prompt` | Ask the configured NVIDIA model a question |
-| `help` | - | Show available commands |
-
-## Automaton Integration
-
-The bot includes **Git Submodule** integration with Automaton for two-way communication:
-
-### Why Submodule?
-✅ Keep Automaton as a separate project  
-✅ Easy to sync with upstream updates  
-✅ Clean separation of concerns  
-✅ Version control for Automaton changes  
-
-### Accessing Automaton in Code
-
-```python
-bot = GhostOTPBot()
-
-# Initialize Automaton
-if bot.initialize_automaton():
-    print("Automaton ready!")
-    # Use bot.automaton to access Automaton functionality
-else:
-    print("Automaton not available")
-```
-
-### Updating Automaton
-
-```bash
-# Update to latest from your fork
-git submodule update --remote
-
-# Update to specific version
-cd automaton
-git checkout <commit-or-tag>
-cd ..
-git add automaton
-git commit -m "Update automaton submodule to <version>"
-```
-
-## Event System
-
-The bot supports an event-based architecture for extensibility:
-
-```python
-def on_otp_generated(data):
-    print(f"OTP generated for {data['username']}")
-    # Send notification, log, etc.
-
-bot.register_listener('otp_generated', on_otp_generated)
-
-# When OTP is generated, event is emitted
-bot.execute_command('generate', 'user')
-```
-
-## Configuration
-
-Create a `.env` file from `.env.example`:
+## Install
 
 ```bash
 cp .env.example .env
+php -r "echo base64_encode(random_bytes(32)), PHP_EOL;"
 ```
 
-Edit `.env` with your settings.
-
-### NVIDIA Chat
-
-Set `NVIDIA_API_KEY` in `.env` and use the `chat` command:
+Put the generated value in `APP_KEY`, generate a separate unique database password, and set it as `DB_PASSWORD`. Export that same password temporarily as `GHOST_DB_PASSWORD` before creating the database user:
 
 ```bash
-NVIDIA_API_KEY=nvapi-your-key
+read -rsp 'New ghost_bot database password: ' GHOST_DB_PASSWORD
+[[ "$GHOST_DB_PASSWORD" =~ ^[A-Za-z0-9_-]{32,}$ ]] || { echo 'Use at least 32 letters, digits, underscores, or hyphens.' >&2; exit 1; }
+mysql -u root -p <<SQL
+CREATE DATABASE ghost_bot CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'ghost_bot'@'127.0.0.1' IDENTIFIED BY '${GHOST_DB_PASSWORD}';
+GRANT ALL PRIVILEGES ON ghost_bot.* TO 'ghost_bot'@'127.0.0.1';
+FLUSH PRIVILEGES;
+SQL
+mysql -h 127.0.0.1 -u ghost_bot -p ghost_bot < database/schema.sql
+unset GHOST_DB_PASSWORD
 ```
 
-```text
-ghost-otp> chat Explain how TOTP verification works
-```
-
-The integration uses NVIDIA's OpenAI-compatible `/v1/chat/completions` endpoint
-with the Nemotron model and settings shown in `.env.example`. The API key is
-read only from the environment and is never included in bot output.
-
-## Development
-
-### Project Structure for Future Features
-
-```
-ghost-otp-bot/
-├── src/ghost_otp_bot/
-│   ├── interfaces/           # Different communication interfaces
-│   │   ├── cli.py            # Command-line interface
-│   │   ├── api.py            # REST API interface
-│   │   └── automaton.py      # Automaton interface
-│   ├── storage/              # Data persistence
-│   │   ├── secrets.py        # Secret management
-│   │   └── database.py       # Database backend
-│   ├── security/             # Security features
-│   │   ├── encryption.py     # Secret encryption
-│   │   └── auth.py           # Authentication
-│   └── ...
-├── tests/                    # Unit and integration tests
-└── docs/                     # Documentation
-```
-
-### Running Tests
+Point the web server document root at `public/`. For local development:
 
 ```bash
-pytest tests/
+php -S 127.0.0.1:8080 -t public public/index.php
+curl http://127.0.0.1:8080/health
 ```
 
-### Code Style
+For Nginx, route missing files to `index.php` and pass PHP requests to PHP-FPM:
 
-Follow PEP 8:
+```nginx
+location / {
+    try_files $uri $uri/ /index.php?$query_string;
+}
+location ~ \.php$ {
+    include fastcgi_params;
+    fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    fastcgi_pass unix:/run/php-fpm/www.sock;
+}
+```
+
+Register the Telegram webhook with the same secret stored in `TELEGRAM_WEBHOOK_SECRET`:
+
 ```bash
-pip install flake8
-flake8 src/
+read -rsp 'Telegram bot token: ' BOT_TOKEN
+read -rsp 'Telegram webhook secret: ' TELEGRAM_WEBHOOK_SECRET
+curl --config - <<CURL_CONFIG
+url = "https://api.telegram.org/bot${BOT_TOKEN}/setWebhook"
+request = "POST"
+form = "url=https://bot.example.com/webhook/telegram"
+form = "secret_token=${TELEGRAM_WEBHOOK_SECRET}"
+CURL_CONFIG
+unset BOT_TOKEN TELEGRAM_WEBHOOK_SECRET
 ```
 
-## Contributing
+Never commit `.env`. Rotating `APP_KEY` makes existing encrypted merchant and OTP secrets unreadable, so decrypt/re-encrypt them before a key rotation.
 
-1. Create a feature branch
-2. Make your changes
-3. Test thoroughly
-4. Submit a pull request
+### NVIDIA chat
 
-## License
+To enable `/chat`, put an NVIDIA API key in `NVIDIA_API_KEY`. The endpoint, model, timeout, maximum tokens, and reasoning budget can be changed with the `NVIDIA_*` values in `.env.example`. The API key is read only from configuration and is never included in bot output or audit logs.
 
-MIT License - See LICENSE file for details
+## Commands
 
-## Roadmap
+| Command | Access | Description |
+| --- | --- | --- |
+| `/me` | User | Profile and merchant-mode status |
+| `/stats` | User | Own command usage |
+| `/globalstats` | User | Global users and command totals |
+| `/otpnew` | User | Create a new encrypted TOTP secret |
+| `/otpverify CODE` | User | Verify a TOTP code |
+| `/merchant-add sk_test_...` | User | Save an encrypted Stripe test key |
+| `/merchant-key` | User | Display only a masked saved key |
+| `/merchant-check pm_card_visa` | User | Run a Stripe sandbox test PaymentIntent |
+| `/chat PROMPT` | User | Ask the configured NVIDIA model a question |
+| `/newapi LABEL` | User | Generate an API token, shown once |
+| `/myapi` | User | List token prefixes and status |
+| `/key PREFIX` | User | Look up metadata for an owned token |
+| `/bin 424242` | User | BIN metadata or local format result |
+| `/iban ...` | User | Validate IBAN structure and checksum |
+| `/ban ID`, `/unban ID` | Admin | Change ban state |
+| `/mute ID`, `/unmute ID` | Admin | Change mute state |
+| `/userstats ID` | Admin | View any user's usage |
+| `/adminapi ID LABEL` | Admin | Generate a token for an existing user |
+| `/revokeapi TOKEN_ID` | Admin | Revoke a token by numeric ID |
 
-- [ ] REST API interface
-- [ ] Database backend for secret storage
-- [ ] Encryption for stored secrets
-- [ ] Backup/restore functionality
-- [ ] Multi-factor authentication support
-- [ ] Integration tests with Automaton
-- [ ] Docker containerization
-- [ ] CLI improvements with better UX
+`ANTI_SPAM_SECONDS` controls the wait between gated actions, including `/chat`. Administrative actions are exempt. The bot attempts to delete `/merchant-add` messages after encrypting the test key; give it message-deletion permission where supported.
 
-## Support
+## HTTP API
 
-For issues and questions:
-- 📝 Open an issue on GitHub
-- 💬 Discuss in GitHub Discussions (if enabled)
-- 📧 Contact the maintainer
+Generate a token with `/newapi` or `/adminapi`, then send it as `Authorization: Bearer ghost_...`:
 
----
+```bash
+read -rsp 'Ghost API token: ' GHOST_API_TOKEN
+curl --config - <<CURL_CONFIG
+url = "https://bot.example.com/api/v1/me"
+header = "Authorization: Bearer ${GHOST_API_TOKEN}"
+CURL_CONFIG
+unset GHOST_API_TOKEN
+```
 
-**Ghost7-alt** | 2026
+Use the same protected curl-config pattern for `/api/v1/bin` and `/api/v1/iban`; do not place bearer tokens directly in command arguments.
+
+The API intentionally does not expose merchant payment testing, NVIDIA chat, or stored secrets.
+
+## Call-event webhook
+
+POST provider-normalized status events to `/webhook/call` with `X-Webhook-Secret`. Only the event identity and type are retained; duplicate event IDs are idempotent.
+
+```json
+{"id":"evt_123","type":"call.completed"}
+```
+
+Map the signature-verified webhook from your call provider to this small internal contract at the reverse proxy or an adapter. Do not expose this endpoint without HTTPS and a strong secret.
+
+## Test
+
+```bash
+composer test
+# or, without Composer:
+php tests/run.php
+```
