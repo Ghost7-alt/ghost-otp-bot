@@ -1,6 +1,6 @@
 # Ghost OTP Bot
 
-An admin-controlled PHP 8.1+ Telegram utility bot with MySQL persistence, TOTP tools, usage statistics, configurable anti-spam protection, user-issued API tokens, and authenticated webhooks.
+An admin-controlled PHP 8.1+ Telegram utility bot with MySQL persistence, TOTP tools, usage statistics, configurable anti-spam protection, user-issued API tokens, authenticated webhooks, and optional NVIDIA-powered chat.
 
 Payment testing is deliberately sandbox-only. The bot accepts Stripe `sk_test_` keys and Stripe test PaymentMethod IDs (for example `pm_card_visa`). It never accepts, stores, or checks raw card numbers, expiry dates, CVVs, or live Stripe keys.
 
@@ -14,6 +14,7 @@ Payment testing is deliberately sandbox-only. The bot accepts Stripe `sk_test_` 
 - Encrypted TOTP secrets and local verification
 - API token generator for users and admins; only SHA-256 token hashes are stored
 - BIN metadata lookup (optional provider) and local IBAN checksum validation
+- Optional NVIDIA-powered chat command using its OpenAI-compatible API
 - Telegram messaging webhook and provider-neutral call-event webhook
 - Audit messages to an optional logs chat without command arguments or secrets
 
@@ -81,6 +82,10 @@ unset BOT_TOKEN TELEGRAM_WEBHOOK_SECRET
 
 Never commit `.env`. Rotating `APP_KEY` makes existing encrypted merchant and OTP secrets unreadable, so decrypt/re-encrypt them before a key rotation.
 
+### NVIDIA chat
+
+To enable `/chat`, put an NVIDIA API key in `NVIDIA_API_KEY`. The endpoint, model, timeout, maximum tokens, and reasoning budget can be changed with the `NVIDIA_*` values in `.env.example`. The API key is read only from configuration and is never included in bot output or audit logs.
+
 ## Commands
 
 | Command | Access | Description |
@@ -93,6 +98,7 @@ Never commit `.env`. Rotating `APP_KEY` makes existing encrypted merchant and OT
 | `/merchant-add sk_test_...` | User | Save an encrypted Stripe test key |
 | `/merchant-key` | User | Display only a masked saved key |
 | `/merchant-check pm_card_visa` | User | Run a Stripe sandbox test PaymentIntent |
+| `/chat PROMPT` | User | Ask the configured NVIDIA model a question |
 | `/newapi LABEL` | User | Generate an API token, shown once |
 | `/myapi` | User | List token prefixes and status |
 | `/key PREFIX` | User | Look up metadata for an owned token |
@@ -104,7 +110,7 @@ Never commit `.env`. Rotating `APP_KEY` makes existing encrypted merchant and OT
 | `/adminapi ID LABEL` | Admin | Generate a token for an existing user |
 | `/revokeapi TOKEN_ID` | Admin | Revoke a token by numeric ID |
 
-`ANTI_SPAM_SECONDS` controls the wait between gated actions. Administrative actions are exempt. The bot attempts to delete `/merchant-add` messages after encrypting the test key; give it message-deletion permission where supported.
+`ANTI_SPAM_SECONDS` controls the wait between gated actions, including `/chat`. Administrative actions are exempt. The bot attempts to delete `/merchant-add` messages after encrypting the test key; give it message-deletion permission where supported.
 
 ## HTTP API
 
@@ -121,7 +127,7 @@ unset GHOST_API_TOKEN
 
 Use the same protected curl-config pattern for `/api/v1/bin` and `/api/v1/iban`; do not place bearer tokens directly in command arguments.
 
-The API intentionally does not expose merchant payment testing or stored secrets.
+The API intentionally does not expose merchant payment testing, NVIDIA chat, or stored secrets.
 
 ## Call-event webhook
 

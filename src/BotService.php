@@ -7,7 +7,7 @@ namespace GhostBot;
 final class BotService
 {
     private const COOLDOWN_COMMANDS = [
-        'otpnew', 'otpverify', 'merchant-add', 'merchant-check', 'newapi', 'bin', 'iban',
+        'otpnew', 'otpverify', 'merchant-add', 'merchant-check', 'newapi', 'bin', 'iban', 'chat',
     ];
 
     public function __construct(
@@ -16,6 +16,7 @@ final class BotService
         private readonly Crypto $crypto,
         private readonly StripeSandbox $stripe,
         private readonly BinLookup $binLookup,
+        private readonly NvidiaClient $nvidia,
         private readonly string $adminId,
         private readonly int $antiSpamSeconds
     ) {
@@ -103,6 +104,7 @@ final class BotService
             'key' => $this->lookupApiToken($user, $arguments),
             'bin' => $this->formatBin($this->binLookup->lookup($arguments)),
             'iban' => $this->formatIban(Utilities::validateIban($arguments)),
+            'chat' => $this->chat($arguments),
             'ban', 'unban', 'mute', 'unmute' => $this->adminFlag($command, $arguments, $isAdmin),
             'userstats' => $this->adminUserStats($arguments, $isAdmin),
             'adminapi' => $this->adminApiToken($arguments, $isAdmin),
@@ -130,6 +132,7 @@ final class BotService
             . "/merchant-add sk_test_... - save encrypted Stripe test key\n"
             . "/merchant-key - show masked saved key\n"
             . "/merchant-check pm_card_visa - run a sandbox test payment\n"
+            . "/chat PROMPT - ask the configured NVIDIA model\n"
             . "/newapi LABEL, /myapi, /key PREFIX - API token tools\n"
             . "/bin 424242, /iban IBAN - utilities";
         if ($isAdmin) {
@@ -213,6 +216,11 @@ final class BotService
         );
         return 'Sandbox result: ' . ($result['ok'] ? 'success' : 'not successful')
             . "\nStatus: {$result['status']}\n{$result['message']}";
+    }
+
+    private function chat(string $prompt): string
+    {
+        return Utilities::truncateUnicode("NVIDIA reply:\n" . $this->nvidia->chat($prompt), 4096);
     }
 
     private function newApiToken(array $user, string $label, string $createdBy): string

@@ -9,8 +9,9 @@ use GhostBot\ApiTokenService;
 use GhostBot\BinLookup;
 use GhostBot\BotService;
 use GhostBot\Database;
-use GhostBot\Totp;
+use GhostBot\NvidiaClient;
 use GhostBot\StripeSandbox;
+use GhostBot\Totp;
 use GhostBot\UserRepository;
 use GhostBot\Utilities;
 
@@ -67,6 +68,53 @@ $tests['Encrypted secrets round trip and are masked'] = static function (): void
     assertSame('************', Crypto::mask('short-secret'));
 };
 
+$tests['NVIDIA chat sends the configured model request without exposing its key'] = static function (): void {
+    $captured = null;
+    $client = new NvidiaClient(
+        'local-test-key',
+        'https://nvidia.invalid/v1/chat/completions',
+        'test/model',
+        12,
+        200,
+        50,
+        static function (string $endpoint, string $key, array $payload, int $timeout) use (&$captured): array {
+            $captured = compact('endpoint', 'key', 'payload', 'timeout');
+            return [200, '{"choices":[{"message":{"content":"TOTP uses time windows."}}]}'];
+        }
+    );
+
+    assertSame('TOTP uses time windows.', $client->chat('Explain TOTP'));
+    assertSame('https://nvidia.invalid/v1/chat/completions', $captured['endpoint']);
+    assertSame('local-test-key', $captured['key']);
+    assertSame('test/model', $captured['payload']['model']);
+    assertSame('Explain TOTP', $captured['payload']['messages'][0]['content']);
+    assertSame(12, $captured['timeout']);
+};
+
+$tests['NVIDIA chat validates prompts and configuration'] = static function (): void {
+    $client = new NvidiaClient('', 'https://nvidia.invalid/v1/chat/completions');
+    assertThrows(static fn () => $client->chat(''), InvalidArgumentException::class);
+    assertThrows(static fn () => $client->chat('Hello'), RuntimeException::class);
+    assertThrows(
+        static fn () => new NvidiaClient('key', 'http://nvidia.invalid/v1/chat/completions'),
+        RuntimeException::class
+    );
+    $invalidTransport = new NvidiaClient(
+        'key',
+        'https://nvidia.invalid/v1/chat/completions',
+        transport: static fn (): string => 'invalid'
+    );
+    assertThrows(static fn () => $invalidTransport->chat('Hello'), RuntimeException::class);
+};
+
+$tests['NVIDIA replies fit Telegram without splitting UTF-8 characters'] = static function (): void {
+    $reply = Utilities::truncateUnicode('NVIDIA reply:' . str_repeat('é', 5000), 4096);
+    assertSame(4096, preg_match_all('/./us', $reply));
+    assertSame(true, str_ends_with($reply, '…'));
+    assertSame('short reply', Utilities::truncateUnicode('short reply', 4096));
+    assertThrows(static fn () => Utilities::truncateUnicode('reply', 65536), InvalidArgumentException::class);
+};
+
 $tests['Bot returns a generic response when user persistence fails'] = static function (): void {
     $pdo = new PDO('sqlite::memory:');
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -77,6 +125,7 @@ $tests['Bot returns a generic response when user persistence fails'] = static fu
         new Crypto(base64_encode(str_repeat('k', 32))),
         new StripeSandbox(),
         new BinLookup(),
+        new NvidiaClient('', 'https://nvidia.invalid/v1/chat/completions'),
         '1',
         5
     );

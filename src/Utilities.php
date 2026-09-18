@@ -6,6 +6,28 @@ namespace GhostBot;
 
 final class Utilities
 {
+    public static function truncateUnicode(string $value, int $maxCharacters): string
+    {
+        if ($maxCharacters < 1 || $maxCharacters > 65535) {
+            throw new \InvalidArgumentException('Maximum character count must be between 1 and 65535.');
+        }
+        $characters = preg_match_all('/./us', $value);
+        if ($characters === false) {
+            throw new \InvalidArgumentException('Text must be valid UTF-8.');
+        }
+        if ($characters <= $maxCharacters) {
+            return $value;
+        }
+        if ($maxCharacters === 1) {
+            return '…';
+        }
+        $limit = $maxCharacters - 1;
+        if (preg_match('/\A.{0,' . $limit . '}/us', $value, $match) !== 1) {
+            throw new \RuntimeException('Unable to truncate text.');
+        }
+        return $match[0] . '…';
+    }
+
     private const IBAN_LENGTHS = [
         'AD' => 24, 'AE' => 23, 'AL' => 28, 'AT' => 20, 'AZ' => 28, 'BA' => 20,
         'BE' => 16, 'BG' => 22, 'BH' => 22, 'BI' => 27, 'BR' => 29, 'CH' => 21, 'CR' => 22,

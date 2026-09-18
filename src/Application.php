@@ -24,6 +24,7 @@ final class Application
             new Crypto(Config::require('APP_KEY')),
             new StripeSandbox(),
             new BinLookup(),
+            new NvidiaClient(),
             Config::require('ADMIN_ID'),
             Config::int('ANTI_SPAM_SECONDS', 5)
         );
