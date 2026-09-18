@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ghost-otp-bot"
+version = "0.2.0"
+description = "A TOTP bot with optional Automaton integration"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "cryptography>=42,<47",
+    "Pillow>=10.1,<12",
+    "pyotp>=2.9,<3",
+    "qrcode>=7.4,<9",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<9", "ruff>=0.6,<1"]
+
+[project.scripts]
+ghost-otp = "ghost_otp_bot.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

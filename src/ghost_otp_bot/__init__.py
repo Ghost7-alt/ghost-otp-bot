@@ -1,11 +1,8 @@
-"""
-Ghost OTP Bot - Two-way communication OTP authentication bot using Automaton
-"""
+"""Public package API."""
 
-__version__ = "0.1.0"
-__author__ = "Ghost7-alt"
+__version__ = "0.2.0"
 
 from .bot import GhostOTPBot
-from .otp_manager import OTPManager
+from .otp_manager import OTPManager, OTPStorageError
 
-__all__ = ["GhostOTPBot", "OTPManager"]
+__all__ = ["GhostOTPBot", "OTPManager", "OTPStorageError"]
